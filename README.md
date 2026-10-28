@@ -1,4 +1,4 @@
-# 开发速查（Quick Reference）- HarmonyOS App
+# 速记清单（Quick Reference）- HarmonyOS App
 
 一个将上游「速查表/备忘清单」Markdown 预处理为离线卡片数据，并在 HarmonyOS 上以更适合手机阅读的方式展示的应用。
 
@@ -11,7 +11,7 @@ App 下载: [AppGallery](https://appgallery.huawei.com/app/detail?id=reference.a
 [![AppGallery QR](assets/https___appgallery.huawei.com_app_detail_id=reference.app.jqknono.com.png)](https://appgallery.huawei.com/app/detail?id=reference.app.jqknono.com)
 
 - [在线清单列表（Web / GitHub Pages）](https://jqknono.github.io/reference-harmony/)
-- [在线清单列表（Web / 阿里云托管，大陆用户可访问）](https://reference.jqknono.com/)
+- [应用官网 / 备忘清单文件列表（Web / 阿里云托管，大陆用户可访问）](https://reference.jqknono.com/)
 
 > 在线清单列表更新速度优先于 App 内离线内容更新速度。App 会尝试加载“云端清单”（在线目录）；若遇到延迟或缺失，仍可使用**添加在线 Markdown 链接**或**导入本地 Markdown 文件**获取最新内容。
 
@@ -61,7 +61,7 @@ App 下载: [AppGallery](https://appgallery.huawei.com/app/detail?id=reference.a
 - **测验（Quiz）**：从当前文档的问答卡片中随机抽题，进行知识测验并查看得分与答题详情。
 - **设置（Settings）**：语言（`zh`/`en`）与主题（`dark`/`light`）切换；在线 Markdown 链接管理；学习模式开关。
 - **离线数据**：运行时从 `rawfile` 读取 JSON 渲染，不依赖在线接口。
-- **在线清单列表**：从后端加载“云端清单”索引，在目录中直接浏览并打开/测验（运行时解析 Markdown）。
+- **清单源**：在设置中添加、命名和删除清单源。默认包含 `reference.jqknono.com` 官方源，删除后保留恢复入口；支持目录缓存、多源浏览和在线 Markdown 阅读/测验。详见 [清单源协议与验证](docs/catalog-sources.md)。
 - **在线 Markdown**：支持添加任意在线 Markdown 链接，实时解析为卡片格式阅读。
 
 ## 数据来源与生成
@@ -200,3 +200,7 @@ npm run build
 - **最佳实践**：[HarmonyOS 最佳实践](https://developer.huawei.com/consumer/cn/doc/best-practices/bpta-best-practices-overview)
 - **API 参考**：[HarmonyOS API 参考](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/development-intro-api)
 - **AppGallery Connect**：[AppGallery Connect 文档入口](https://developer.huawei.com/consumer/cn/agconnect/)
+
+## dev 本机签名材料
+
+机器级 debug/release 证书及本应用 Profile 集中存放于 `/home/jqknono/Documents/HarmonyOS/signing`。构建配置已使用本机路径，`default` product 为调试签名，`publish` product 为发布签名。详情见 [本机签名说明](docs/local-signing.md)。

@@ -15,27 +15,33 @@ import { QuizRepository } from '../common/quizRepository';
 import { OnlineMdRepository } from '../common/onlineMdRepository';
 import { LocalMdRepository } from '../common/localMdRepository';
 import { OnlineCatalogRepository } from '../common/onlineCatalogRepository';
+import { formatCatalogError } from '../common/catalogError';
+import { CatalogSourceRepository } from '../common/catalogSourceRepository';
+import { DEFAULT_CATALOG_SOURCE_ID, mergeCatalogSourceDocs, addCatalogSource, removeCatalogSource, restoreDefaultCatalogSource } from '../common/catalogSourceModels';
+import type { CatalogSource, CatalogSourceStatus } from '../common/catalogSourceModels';
 import type { OnlineMdLink } from '../common/onlineMdModels';
 import { peekLaunchParams, takeLaunchParams } from '../common/launchParamsStore';
 import type { LaunchParams } from '../common/launchParamsStore';
 import { requestAppReview } from '../common/appReview';
 
 import type { SectionWithCards } from './index/types';
-import { APP_REVIEW_MIN_DAYS_SINCE_FIRST_LAUNCH, APP_REVIEW_MIN_LAUNCH_COUNT, APP_REVIEW_PREF_KEY_DO_NOT_ASK, APP_REVIEW_PREF_KEY_FIRST_LAUNCH_AT, APP_REVIEW_PREF_KEY_LAST_PROMPT_AT, APP_REVIEW_PREF_KEY_LAUNCH_COUNT, APP_REVIEW_PROMPT_COOLDOWN_DAYS, CATALOG_DOC_ID_BLACKLIST, DEBUG_MODE_PREF_KEY, DEBUG_SERVER_ORIGIN_PREF_KEY, DEFAULT_DEBUG_SERVER_ORIGIN, ENABLE_APP_REVIEW_PROMPT, ENABLE_ONLINE_CLOUD_CATALOG, ENABLE_ORIENTATION_MODE_SETTING, ENABLE_PRIVACY_CONSENT_DIALOG, ENABLE_RECENT_DOCS, LAUNCH_ACTION_OPEN_RECENT_DOCS, PRIVACY_CONSENT_PREF_KEY, PRIVACY_STATEMENT_URL, RECENT_DOC_MAX_COUNT, TABBAR_AUTO_HIDE_EFFECTIVE_ASPECT_RATIO_THRESHOLD } from './index/constants';
+import { APP_REVIEW_MIN_DAYS_SINCE_FIRST_LAUNCH, APP_REVIEW_MIN_LAUNCH_COUNT, APP_REVIEW_PREF_KEY_DO_NOT_ASK, APP_REVIEW_PREF_KEY_FIRST_LAUNCH_AT, APP_REVIEW_PREF_KEY_LAST_PROMPT_AT, APP_REVIEW_PREF_KEY_LAUNCH_COUNT, APP_REVIEW_PROMPT_COOLDOWN_DAYS, CATALOG_DOC_ID_BLACKLIST, DEBUG_MODE_PREF_KEY, DEBUG_SERVER_ORIGIN_PREF_KEY, DEFAULT_DEBUG_SERVER_ORIGIN, ENABLE_APP_REVIEW_PROMPT, ENABLE_ORIENTATION_MODE_SETTING, ENABLE_PRIVACY_CONSENT_DIALOG, ENABLE_RECENT_DOCS, LAUNCH_ACTION_OPEN_RECENT_DOCS, PRIVACY_CONSENT_PREF_KEY, PRIVACY_STATEMENT_URL, RECENT_DOC_MAX_COUNT, TABBAR_AUTO_HIDE_EFFECTIVE_ASPECT_RATIO_THRESHOLD } from './index/constants';
 import { lengthToNumber, normalizeSearchTokens, cardMatchesTokens, toHexColorString } from './index/utils';
 import { DocListTab } from './index/DocListTab';
 import { ReadTab } from './index/ReadTab';
 import { QuizTab } from './index/QuizTab';
 import { SettingsTab } from './index/SettingsTab';
-import { CustomListTab } from './index/CustomListTab';
-import type { ViewMode as CustomListViewMode } from './index/CustomListTab';
+import { MarketplaceTab } from './index/MarketplaceTab';
+import { MarketplaceRepository } from '../common/marketplaceRepository';
+import { addMarketplaceCatalog, marketplaceSource } from '../common/marketplaceModels';
+import type { MarketplaceCatalog } from '../common/marketplaceModels';
 import { TocPanel } from './index/TocPanel';
-import type { CustomList, CustomListCollection, ListSection, MemoryTable } from '../common/customListModels';
+import type { CustomList, CustomListCollection } from '../common/customListModels';
 import { createEmptyCustomListCollection } from '../common/customListModels';
 import { CustomListRepository } from '../common/customListRepository';
 import { listToMarkdown } from '../common/customListModels';
 import { countMarkdownTableRows, parseMarkdownToDoc } from '../common/markdownDocParser';
-import { handleCustomListBackPress, handleQuizBackPress } from '../common/backHandlerRegistry';
+import { handleQuizBackPress } from '../common/backHandlerRegistry';
 
 type Preferences = preferences.Preferences;
 type ValueType = preferences.ValueType;
@@ -147,6 +153,13 @@ struct Index {
   // 在线清单列表（后端目录）相关状态
   @State private cloudCatalogDocs: Array<ReferenceDocSummary> = [];
   private onlineCatalogRepository: OnlineCatalogRepository = new OnlineCatalogRepository();
+  private catalogSourceRepository: CatalogSourceRepository = new CatalogSourceRepository();
+  private catalogRequestId: number = 0;
+  @State private catalogSources: Array<CatalogSource> = [];
+  @State private catalogSourceStatuses: Array<CatalogSourceStatus> = [];
+  @State private sourceUrlInput: string = '';
+  @State private sourceMessage: string = '';
+  @State private sourceSaving: boolean = false;
   @State private debugModeEnabled: boolean = false;
   @State private debugServerOrigin: string = DEFAULT_DEBUG_SERVER_ORIGIN;
   @State private debugServerOriginInput: string = DEFAULT_DEBUG_SERVER_ORIGIN;
@@ -180,29 +193,26 @@ struct Index {
 
   // 自定义清单相关状态
   @State private customLists: CustomListCollection = createEmptyCustomListCollection();
-  @State private customListScrollY: number = 0;
   private customListRepository: CustomListRepository = new CustomListRepository();
-  // 自定义清单 Tab 的 UI 状态：横竖屏切换时 Index 会切换不同的布局树，子组件可能重建。
-  // 这里把关键编辑状态上移到 Index，避免旋转导致回到“我的清单”根页或丢表单输入。
-  @State private customListViewMode: CustomListViewMode = 'lists';
-  @State private customListSelectedList: CustomList | null = null;
-  @State private customListSelectedSection: ListSection | null = null;
-  @State private customListSelectedTable: MemoryTable | null = null;
-  @State private customListShowTableSectionPicker: boolean = false;
-  @State private customListEditListName: string = '';
-  @State private customListEditListDesc: string = '';
-  @State private customListEditSectionTitle: string = '';
-  @State private customListEditSectionContent: string = '';
-  // 章节仅支持 H2/H3（##/###），默认 H2
-  @State private customListEditSectionLevel: number = 2;
-  @State private customListIsEditing: boolean = false;
-  @State private customListEditHeaders: Array<string> = [];
-  @State private customListEditRows: Array<Array<string>> = [];
-  @State private customListEditRowIds: Array<string> = [];
+
+  // 集市状态放在入口页，横竖屏切换时保留搜索词和浏览位置。
+  @State private marketplaceItems: Array<MarketplaceCatalog> = [];
+  @State private marketplaceQuery: string = '';
+  @State private marketplaceLoading: boolean = false;
+  @State private marketplaceError: string = '';
+  @State private marketplaceMessage: string = '';
+  @State private marketplaceMessageError: boolean = false;
+  @State private marketplaceAddingUrl: string = '';
+  @State private marketplaceScrollIndex: number = 0;
+  private marketplaceLoaded: boolean = false;
+  private marketplaceRepository: MarketplaceRepository = new MarketplaceRepository();
+  private marketplaceScroller: ListScroller = new ListScroller();
+  private marketplaceSearchController: TextInputController = new TextInputController();
 
   private stopAllTextInputEditing(): void {
     this.catalogSearchInputController.stopEditing();
     this.docSearchInputController.stopEditing();
+    this.marketplaceSearchController.stopEditing();
     this.getUIContext().getFocusController().clearFocus();
   }
 
@@ -1112,7 +1122,7 @@ struct Index {
 
     const results: Array<ReferenceDocSummary> = [];
     const pushIfMatched = (doc: ReferenceDocSummary): void => {
-      const haystack = [doc.name ?? '', doc.title ?? '', doc.id].join(' ').toLowerCase();
+      const haystack = [doc.name ?? '', doc.title ?? '', doc.sourceName ?? '', doc.id].join(' ').toLowerCase();
       if (haystack.indexOf(query) >= 0) {
         results.push(doc);
       }
@@ -1286,18 +1296,28 @@ struct Index {
 
     const targetLang: ReferenceLang = this.lang;
     const rowCountRequestId: number = ++this.manifestRowCountRequestId;
+    const defaultSource = this.catalogSources.find((source: CatalogSource): boolean => source.id === DEFAULT_CATALOG_SOURCE_ID);
+    if (!defaultSource?.enabled) {
+      this.loading = false;
+      this.errorText = '';
+      this.docs = [];
+      this.rebuildCatalogSearchResults();
+      return;
+    }
 
     this.loading = true;
     this.errorText = '';
     await repo.getManifestByLang(targetLang).then(
       async (manifest: ReferenceManifest): Promise<void> => {
-        if (this.lang !== targetLang) {
+        if (this.lang !== targetLang || rowCountRequestId !== this.manifestRowCountRequestId) {
           return;
         }
         this.docs = (manifest.docs ?? [])
           .filter((doc: ReferenceDocSummary): boolean => !CATALOG_DOC_ID_BLACKLIST.has(doc.id))
           .map((doc: ReferenceDocSummary): ReferenceDocSummary => ({
             id: doc.id,
+            sourceId: defaultSource.id,
+            sourceName: defaultSource.name,
             name: doc.name || doc.title || doc.id,
             title: doc.title || doc.name || doc.id,
             icon: doc.icon,
@@ -1363,6 +1383,7 @@ struct Index {
         this.manifestTableRowCountByDocKey.set(key, rows);
       }));
 
+      if (this.lang !== lang || requestId !== this.manifestRowCountRequestId) return;
       // Apply partial updates for better responsiveness; rebuild search results at the end.
       const nextDocs: Array<ReferenceDocSummary> = (this.docs ?? []).map((d: ReferenceDocSummary): ReferenceDocSummary => {
         const docId = (d?.id ?? '').trim();
@@ -1371,6 +1392,8 @@ struct Index {
         if (rows <= 0 || d.cardCount === rows) return d;
         return {
           id: d.id,
+          sourceId: d.sourceId,
+          sourceName: d.sourceName,
           name: d.name,
           title: d.title,
           icon: d.icon,
@@ -1432,13 +1455,14 @@ struct Index {
     await this.loadLearningModeSetting();
     await this.loadDebugSettings();
     await this.loadFavoriteAndRecentDocs();
+    await this.loadCatalogSources();
     await this.loadManifest(!skipAutoOpenFirst);
     await this.loadManifestCounts();
     await this.loadQuizRecord();
     await this.loadCustomLists();
     await this.loadOnlineMdLinks();
     await this.loadLocalMdLinks();
-    await this.loadCloudCatalog();
+    this.loadCloudCatalog();
     await this.consumeNotificationLaunchIfAny();
     await this.recordLaunchAndMaybePromptForReview();
   }
@@ -1614,34 +1638,161 @@ struct Index {
     await this.rebuildLocalMdDocs();
   }
 
-  private async loadCloudCatalog(): Promise<void> {
-    if (!ENABLE_ONLINE_CLOUD_CATALOG) {
-      // Feature flag off: keep cloud docs empty and skip any network requests.
-      if (this.cloudCatalogDocs.length > 0) {
-        this.cloudCatalogDocs = [];
-        this.rebuildCatalogSearchResults();
-      }
-      return;
-    }
-    const targetLang: ReferenceLang = this.lang;
-    const apiUrlOrOriginOverride: string = this.debugModeEnabled ? this.debugServerOrigin : '';
-    await this.onlineCatalogRepository.fetchCatalog(targetLang, apiUrlOrOriginOverride).then(
-      (docs: Array<ReferenceDocSummary>): void => {
-        if (this.lang !== targetLang) return;
-        this.cloudCatalogDocs = docs;
-        this.rebuildCatalogSearchResults();
-      },
-      (e: Error | string): void => {
-        if (this.lang !== targetLang) return;
-        if (!this.debugModeEnabled) return;
-        if (!this.errorText) {
-          this.errorText = this.t(
-            `在线清单列表加载失败：${String(e)}`,
-            `Failed to load online catalog: ${String(e)}`,
-          );
+  private async loadMarketplace(refresh: boolean = false): Promise<void> {
+    if (this.marketplaceLoading || (this.marketplaceLoaded && !refresh)) return;
+    const host = this.getUIContext().getHostContext();
+    if (!host) return;
+    this.marketplaceLoading = true;
+    this.marketplaceError = '';
+    this.marketplaceMessage = '';
+    this.marketplaceMessageError = false;
+    try {
+      if (!this.marketplaceLoaded) {
+        try {
+          this.marketplaceItems = await this.marketplaceRepository.getCached(host);
+        } catch (error) {
+          this.marketplaceError = formatCatalogError(error, this.lang);
         }
-      },
-    );
+      }
+      const catalogs = await this.marketplaceRepository.fetchCatalogs();
+      this.marketplaceItems = catalogs;
+      this.marketplaceError = '';
+      try {
+        await this.marketplaceRepository.saveCache(host, catalogs);
+      } catch (error) {
+        this.marketplaceMessage = this.t('集市已更新，离线缓存保存失败：', 'Market updated; could not save offline cache: ') + formatCatalogError(error, this.lang);
+        this.marketplaceMessageError = true;
+      }
+    } catch (error) {
+      this.marketplaceError = formatCatalogError(error, this.lang);
+    } finally {
+      this.marketplaceLoaded = true;
+      this.marketplaceLoading = false;
+    }
+  }
+
+  private async addFromMarketplace(item: MarketplaceCatalog): Promise<void> {
+    if (this.sourceSaving || this.marketplaceAddingUrl) return;
+    this.marketplaceAddingUrl = item.catalogUrl;
+    this.marketplaceMessage = '';
+    this.marketplaceMessageError = false;
+    try {
+      const sources = addMarketplaceCatalog(this.catalogSources, item);
+      if (sources !== this.catalogSources) await this.applyCatalogSources(sources);
+      if (marketplaceSource(this.catalogSources, item)?.enabled) {
+        this.marketplaceMessage = this.t('已添加清单源，可在“目录”中浏览，或在“设置”中管理。', 'Source added. Browse it in Catalog or manage it in Settings.');
+      } else {
+        this.marketplaceMessage = this.sourceMessage || this.t('添加失败，请重试。', 'Could not add the source. Please retry.');
+        this.marketplaceMessageError = true;
+      }
+    } catch (error) {
+      this.marketplaceMessage = formatCatalogError(error, this.lang);
+      this.marketplaceMessageError = true;
+    } finally {
+      this.marketplaceAddingUrl = '';
+    }
+  }
+
+  private async loadCatalogSources(): Promise<void> {
+    const host = this.getUIContext().getHostContext();
+    if (!host) return;
+    try {
+      this.catalogSources = await this.catalogSourceRepository.getSources(host);
+    } catch (error) {
+      this.sourceMessage = this.t(`读取清单源失败：${String(error)}`, `Could not read sources: ${String(error)}`);
+    }
+  }
+
+  private async saveCatalogSourceInput(): Promise<void> {
+    if (this.sourceSaving) return;
+    try {
+      const sources = addCatalogSource(this.catalogSources, this.sourceUrlInput);
+      await this.applyCatalogSources(sources);
+    } catch (error) {
+      this.sourceMessage = this.t(`保存失败：${String(error)}`, `Could not save: ${String(error)}`);
+    }
+  }
+
+  private async applyCatalogSources(sources: Array<CatalogSource>): Promise<void> {
+    if (this.sourceSaving) return;
+    const host = this.getUIContext().getHostContext();
+    if (!host) return;
+    this.sourceSaving = true;
+    try {
+      await this.catalogSourceRepository.saveSources(host, sources);
+      const selectedSourceId = this.cloudCatalogDocs.find((doc: ReferenceDocSummary): boolean => doc.id === this.selectedDocId)?.sourceId ||
+        this.docs.find((doc: ReferenceDocSummary): boolean => doc.id === this.selectedDocId)?.sourceId;
+      this.catalogRequestId++;
+      this.openDocRequestId++;
+      this.loading = false;
+      this.catalogSources = sources;
+      this.cloudCatalogDocs = this.cloudCatalogDocs.filter((doc: ReferenceDocSummary): boolean =>
+        sources.some((source: CatalogSource): boolean => source.enabled && source.id === doc.sourceId));
+      this.sourceUrlInput = '';
+      this.sourceMessage = '';
+      const defaultEnabled = sources.some((source: CatalogSource): boolean => source.id === DEFAULT_CATALOG_SOURCE_ID && source.enabled);
+      if ((!defaultEnabled && selectedSourceId === DEFAULT_CATALOG_SOURCE_ID) ||
+        (selectedSourceId && !sources.some((source: CatalogSource): boolean => source.id === selectedSourceId && source.enabled))) {
+        this.selectedDoc = undefined;
+        this.selectedDocId = '';
+        this.sectionCards = [];
+        this.searchSectionCards = [];
+        this.quizAvailableCount = 0;
+      }
+      await this.loadManifest(false);
+      this.rebuildCatalogSearchResults();
+      this.loadCloudCatalog();
+    } catch (error) {
+      this.sourceMessage = this.t(`保存失败：${String(error)}`, `Could not save: ${String(error)}`);
+    } finally {
+      this.sourceSaving = false;
+    }
+  }
+
+  private mergeSourceDocs(source: CatalogSource, docs: Array<ReferenceDocSummary>, lang: ReferenceLang): void {
+    this.cloudCatalogDocs = mergeCatalogSourceDocs(source, docs, this.docs, this.cloudCatalogDocs, lang, CATALOG_DOC_ID_BLACKLIST);
+    this.rebuildCatalogSearchResults();
+  }
+
+  private async loadCloudCatalog(): Promise<void> {
+    const requestId = ++this.catalogRequestId;
+    const targetLang: ReferenceLang = this.lang;
+    const host = this.getUIContext().getHostContext();
+    if (!host) return;
+    const sources = this.catalogSources.filter((source: CatalogSource): boolean => source.enabled);
+    this.catalogSourceStatuses = sources.map((source: CatalogSource): CatalogSourceStatus => ({
+      sourceId: source.id, loading: true, count: 0, error: '',
+    }));
+    await Promise.all(sources.map(async (source: CatalogSource): Promise<void> => {
+      let docs: Array<ReferenceDocSummary> = [];
+      let errorText = '';
+      try {
+        docs = await this.catalogSourceRepository.getCatalog(host, source.id, targetLang);
+        if (requestId !== this.catalogRequestId || targetLang !== this.lang) return;
+        this.mergeSourceDocs(source, docs, targetLang);
+      } catch (error) {
+        // 目录缓存可由本次网络同步重新生成。
+      }
+      try {
+        const override = this.debugModeEnabled && source.id === DEFAULT_CATALOG_SOURCE_ID ? this.debugServerOrigin : undefined;
+        docs = await this.onlineCatalogRepository.fetchCatalog(targetLang, source, override);
+        if (requestId !== this.catalogRequestId || targetLang !== this.lang) return;
+        this.mergeSourceDocs(source, docs, targetLang);
+        try {
+          await this.catalogSourceRepository.saveCatalog(host, source.id, targetLang, docs);
+        } catch (error) {
+          errorText = this.t('目录已同步，保存离线缓存失败：', 'Catalog synced, but offline cache could not be saved: ') +
+            formatCatalogError(error, targetLang);
+        }
+      } catch (error) {
+        errorText = this.t('同步失败，保留本地内容：\n', 'Sync failed; local content retained:\n') + formatCatalogError(error, targetLang);
+      }
+      if (requestId !== this.catalogRequestId || targetLang !== this.lang) return;
+      const count = this.cloudCatalogDocs.filter((doc: ReferenceDocSummary): boolean => doc.sourceId === source.id).length +
+        (source.id === DEFAULT_CATALOG_SOURCE_ID ? this.docs.length : 0);
+      this.catalogSourceStatuses = this.catalogSourceStatuses.map((status: CatalogSourceStatus): CatalogSourceStatus =>
+        status.sourceId === source.id ? { sourceId: source.id, loading: false, count: count, error: errorText } : status);
+    }));
   }
 
   private findOnlineMdLink(linkId: string): OnlineMdLink | undefined {
@@ -2032,6 +2183,8 @@ struct Index {
       changed = true;
       next.push({
         id: item.id,
+        sourceId: item.sourceId,
+        sourceName: item.sourceName,
         name: doc.name || item.name,
         title: doc.title || item.title,
         icon: item.icon,
@@ -2047,6 +2200,8 @@ struct Index {
   }
 
   private async ensureCloudDocReady(docId: string): Promise<ReferenceDoc | undefined> {
+    const summary = this.findCloudCatalogSummary(docId);
+    if (!summary) return undefined;
     const inMemory = this.onlineMdDocCache.get(docId);
     if (inMemory) return inMemory;
 
@@ -2059,7 +2214,6 @@ struct Index {
       return cachedDoc;
     }
 
-    const summary = this.findCloudCatalogSummary(docId);
     const url = this.cloudMdUrlFromSummary(summary);
     if (!url) return undefined;
 
@@ -2433,9 +2587,6 @@ struct Index {
         return true;
       }
     }
-    if (this.currentTabIndex === 3 && handleCustomListBackPress() === true) {
-      return true;
-    }
     if (this.currentTabIndex === 2 && handleQuizBackPress() === true) {
       return true;
     }
@@ -2452,7 +2603,7 @@ struct Index {
     // 英文 "Cheatsheet" 在窄屏/大字号下易被截断；插入零宽空格以允许必要时在单词内部换行。
     if (index === 1) return this.t('清单', 'Cheat\u200Bsheet');
     if (index === 2) return this.t('测验', 'Quiz');
-    if (index === 3) return this.t('记忆', 'Memory');
+    if (index === 3) return this.t('集市', 'Market');
     return this.t('设置', 'Settings');
   }
 
@@ -2478,7 +2629,7 @@ struct Index {
     if (index === 0) return '\uF03A'; // list
     if (index === 1) return '\uF02D'; // book
     if (index === 2) return '\uF059'; // question-circle
-    if (index === 3) return '\uF5DA'; // brain (memory/learning)
+    if (index === 3) return '\uF54E'; // store（集市）
     return '\uF013'; // gear
   }
 
@@ -2684,6 +2835,24 @@ struct Index {
   }
 
   @Builder
+  private MarketplacePage() {
+    MarketplaceTab({
+      theme: this.theme, fontSize: this.fontSize, lang: this.lang,
+      items: this.marketplaceItems, sources: this.catalogSources,
+      query: this.marketplaceQuery, scrollIndex: this.marketplaceScrollIndex,
+      loading: this.marketplaceLoading, error: this.marketplaceError,
+      message: this.marketplaceMessage, messageError: this.marketplaceMessageError,
+      saving: this.sourceSaving || this.marketplaceAddingUrl.length > 0, addingUrl: this.marketplaceAddingUrl,
+      scroller: this.marketplaceScroller, searchController: this.marketplaceSearchController,
+      onLoad: (): void => { this.loadMarketplace(); },
+      onRefresh: (): void => { this.loadMarketplace(true); },
+      onAdd: (item: MarketplaceCatalog): void => { this.addFromMarketplace(item); },
+      onLandscapeScrollDirection: (direction: 'up' | 'down'): void => { this.handleLandscapeContentScroll(direction); },
+      onTitleAreaHeightChange: (height: number): void => { this.setTitleAreaHeight(height); },
+    });
+  }
+
+  @Builder
   private TabBarItem(index: number): void {
     Column() {
       if (this.isLandscape) {
@@ -2875,33 +3044,18 @@ struct Index {
         onTitleAreaHeightChange: (height: number): void => { this.setTitleAreaHeight(height); },
       });
     } else if (this.currentTabIndex === 3) {
-      CustomListTab({
-        theme: this.theme,
-        fontSize: this.fontSize,
-        lang: this.lang,
-        isLandscape: this.isLandscape,
-        customLists: this.customLists,
-        scrollY: this.customListScrollY,
-        viewMode: this.customListViewMode,
-        selectedList: this.customListSelectedList,
-        selectedSection: this.customListSelectedSection,
-        selectedTable: this.customListSelectedTable,
-        showTableSectionPicker: this.customListShowTableSectionPicker,
-        editListName: this.customListEditListName,
-        editListDesc: this.customListEditListDesc,
-        editSectionTitle: this.customListEditSectionTitle,
-        editSectionContent: this.customListEditSectionContent,
-        editSectionLevel: this.customListEditSectionLevel,
-        isEditing: this.customListIsEditing,
-        editHeaders: this.customListEditHeaders,
-        editRows: this.customListEditRows,
-        editRowIds: this.customListEditRowIds,
-        onLandscapeScrollDirection: (direction: 'up' | 'down'): void => { this.handleLandscapeContentScroll(direction); },
-        onTitleAreaHeightChange: (height: number): void => { this.setTitleAreaHeight(height); },
-        onRefreshLists: (): void => { this.loadCustomLists(); },
-      });
+      this.MarketplacePage();
     } else {
       SettingsTab({
+        catalogSources: this.catalogSources,
+        catalogSourceStatuses: this.catalogSourceStatuses,
+        sourceUrlInput: this.sourceUrlInput,
+        sourceMessage: this.sourceMessage,
+        sourceSaving: this.sourceSaving,
+        onSaveSource: (): void => { this.saveCatalogSourceInput(); },
+        onRemoveSource: (id: string): void => { this.applyCatalogSources(removeCatalogSource(this.catalogSources, id)); },
+        onRestoreSource: (): void => { this.applyCatalogSources(restoreDefaultCatalogSource(this.catalogSources)); },
+        onRefreshSources: (): void => { this.loadCloudCatalog(); },
         theme: this.theme,
         fontSize: this.fontSize,
         lang: this.lang,
@@ -3085,36 +3239,21 @@ struct Index {
             .tabBar(this.TabBarItem(2));
 
             TabContent() {
-              CustomListTab({
-                theme: this.theme,
-                fontSize: this.fontSize,
-                lang: this.lang,
-                isLandscape: this.isLandscape,
-                customLists: this.customLists,
-                scrollY: this.customListScrollY,
-                viewMode: this.customListViewMode,
-                selectedList: this.customListSelectedList,
-                selectedSection: this.customListSelectedSection,
-                selectedTable: this.customListSelectedTable,
-                showTableSectionPicker: this.customListShowTableSectionPicker,
-                editListName: this.customListEditListName,
-                editListDesc: this.customListEditListDesc,
-                editSectionTitle: this.customListEditSectionTitle,
-                editSectionContent: this.customListEditSectionContent,
-                editSectionLevel: this.customListEditSectionLevel,
-                isEditing: this.customListIsEditing,
-                editHeaders: this.customListEditHeaders,
-                editRows: this.customListEditRows,
-                editRowIds: this.customListEditRowIds,
-                onLandscapeScrollDirection: (direction: 'up' | 'down'): void => { this.handleLandscapeContentScroll(direction); },
-                onTitleAreaHeightChange: (height: number): void => { this.setTitleAreaHeight(height); },
-                onRefreshLists: (): void => { this.loadCustomLists(); },
-              });
+              this.MarketplacePage();
             }
             .tabBar(this.TabBarItem(3));
 
             TabContent() {
               SettingsTab({
+                catalogSources: this.catalogSources,
+                catalogSourceStatuses: this.catalogSourceStatuses,
+                sourceUrlInput: this.sourceUrlInput,
+                sourceMessage: this.sourceMessage,
+                sourceSaving: this.sourceSaving,
+                onSaveSource: (): void => { this.saveCatalogSourceInput(); },
+                onRemoveSource: (id: string): void => { this.applyCatalogSources(removeCatalogSource(this.catalogSources, id)); },
+                onRestoreSource: (): void => { this.applyCatalogSources(restoreDefaultCatalogSource(this.catalogSources)); },
+                onRefreshSources: (): void => { this.loadCloudCatalog(); },
                 theme: this.theme,
                 fontSize: this.fontSize,
                 lang: this.lang,

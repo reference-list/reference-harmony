@@ -6,11 +6,11 @@
     },
     {
       "name": "EntryAbility_desc",
-      "value": "开发速查：把 Markdown 转成卡片记忆"
+      "value": "速记清单：把 Markdown 转成卡片记忆"
     },
     {
       "name": "EntryAbility_label",
-      "value": "开发速查"
+      "value": "速记清单"
     }
   ]
 }

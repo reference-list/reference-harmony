@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <style>
+      .title { font: 700 28px "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", sans-serif; fill: #1f2937; }
+      .sub { font: 400 14px "Noto Sans CJK SC", "Noto Sans SC", sans-serif; fill: #6b7280; }
+      .label { font: 600 15px "Noto Sans CJK SC", "Noto Sans SC", sans-serif; fill: #111827; }
+      .small { font: 400 12px "Noto Sans CJK SC", "Noto Sans SC", sans-serif; fill: #4b5563; }
+      .edge { font: 500 12px "Noto Sans CJK SC", "Noto Sans SC", sans-serif; fill: #6b7280; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="720" fill="#f8fafc"/>
+  <text x="48" y="52" class="title">速记清单 · 简略运行流程</text>
+  <text x="48" y="76" class="sub">HarmonyOS App 运行时路径（离线 JSON + Markdown 解析 + 五页切换）</text>
+
+  <!-- 启动链 -->
+  <g>
+    <rect x="48" y="110" rx="12" width="160" height="64" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="128" y="138" text-anchor="middle" class="label">启动应用</text>
+    <text x="128" y="158" text-anchor="middle" class="small">EntryAbility</text>
+
+    <rect x="248" y="110" rx="12" width="160" height="64" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="328" y="138" text-anchor="middle" class="label">加载主页</text>
+    <text x="328" y="158" text-anchor="middle" class="small">pages/Index</text>
+
+    <rect x="448" y="110" rx="12" width="180" height="64" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="538" y="138" text-anchor="middle" class="label">读取本地设置</text>
+    <text x="538" y="158" text-anchor="middle" class="small">语言 / 主题 / 学习模式</text>
+
+    <rect x="668" y="110" rx="12" width="200" height="64" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="768" y="138" text-anchor="middle" class="label">加载离线清单</text>
+    <text x="768" y="158" text-anchor="middle" class="small">rawfile JSON + manifest</text>
+
+    <rect x="908" y="110" rx="12" width="324" height="64" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="1070" y="138" text-anchor="middle" class="label">加载用户数据</text>
+    <text x="1070" y="158" text-anchor="middle" class="small">收藏 · 最近 · 自定义 · 导入 MD</text>
+  </g>
+  <line x1="208" y1="142" x2="248" y2="142" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="408" y1="142" x2="448" y2="142" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="628" y1="142" x2="668" y2="142" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="868" y1="142" x2="908" y2="142" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 目录 -->
+  <rect x="500" y="230" rx="16" width="280" height="72" fill="#1d4ed8" stroke="none"/>
+  <text x="640" y="262" text-anchor="middle" class="label" fill="#fff">目录页</text>
+  <text x="640" y="282" text-anchor="middle" class="small" fill="#dbeafe">浏览 / 搜索 / 收藏 / 最近</text>
+  <line x1="1070" y1="174" x2="1070" y2="266" stroke="#64748b" stroke-width="2"/>
+  <line x1="1070" y1="266" x2="780" y2="266" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 选择 -->
+  <polygon points="640,360 740,410 640,460 540,410" fill="#fff" stroke="#0f766e" stroke-width="2"/>
+  <text x="640" y="406" text-anchor="middle" class="label">选择内容</text>
+  <text x="640" y="424" text-anchor="middle" class="small">来源分流</text>
+  <line x1="640" y1="302" x2="640" y2="360" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 三路数据 -->
+  <rect x="80" y="500" rx="12" width="220" height="64" fill="#fff" stroke="#0f766e" stroke-width="2"/>
+  <text x="190" y="528" text-anchor="middle" class="label">离线文档</text>
+  <text x="190" y="548" text-anchor="middle" class="small">ReferenceRepository</text>
+
+  <rect x="530" y="500" rx="12" width="220" height="64" fill="#fff" stroke="#0f766e" stroke-width="2"/>
+  <text x="640" y="528" text-anchor="middle" class="label">在线 / 本地 MD</text>
+  <text x="640" y="548" text-anchor="middle" class="small">拉取或读文件后解析</text>
+
+  <rect x="980" y="500" rx="12" width="220" height="64" fill="#fff" stroke="#0f766e" stroke-width="2"/>
+  <text x="1090" y="528" text-anchor="middle" class="label">自定义记忆</text>
+  <text x="1090" y="548" text-anchor="middle" class="small">记忆页编辑清单</text>
+
+  <path d="M580,410 L190,410 L190,500" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="640" y1="460" x2="640" y2="500" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M700,410 L1090,410 L1090,500" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="280" y="398" class="edge">离线 JSON</text>
+  <text x="660" y="488" class="edge">Markdown</text>
+  <text x="920" y="398" class="edge">记忆</text>
+
+  <!-- 阅读与测验 -->
+  <rect x="200" y="620" rx="12" width="280" height="64" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="340" y="648" text-anchor="middle" class="label">清单阅读页</text>
+  <text x="340" y="668" text-anchor="middle" class="small">卡片 / 搜索 / 目录跳转</text>
+
+  <rect x="560" y="620" rx="12" width="220" height="64" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="670" y="648" text-anchor="middle" class="label">测验页</text>
+  <text x="670" y="668" text-anchor="middle" class="small">抽取问答卡并计分</text>
+
+  <rect x="860" y="620" rx="12" width="220" height="64" fill="#fff" stroke="#b45309" stroke-width="2"/>
+  <text x="970" y="648" text-anchor="middle" class="label">设置页</text>
+  <text x="970" y="668" text-anchor="middle" class="small">语言主题 / 导入链接</text>
+
+  <line x1="190" y1="564" x2="190" y2="652" stroke="#64748b" stroke-width="2"/>
+  <line x1="190" y1="652" x2="200" y2="652" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="640" y1="564" x2="640" y2="600" stroke="#64748b" stroke-width="2"/>
+  <line x1="640" y1="600" x2="340" y2="600" stroke="#64748b" stroke-width="2"/>
+  <line x1="340" y1="600" x2="340" y2="620" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="480" y1="652" x2="560" y2="652" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="500" y="640" class="edge">测验</text>
+
+  <!-- 设置从目录 -->
+  <path d="M780,266 L970,266 L970,620" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <text x="986" y="300" class="edge">设置</text>
+</svg>

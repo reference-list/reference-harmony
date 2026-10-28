@@ -1,3 +1,5 @@
+import { CatalogSourcesPanel } from './CatalogSourcesPanel';
+import type { CatalogSource, CatalogSourceStatus } from '../../common/catalogSourceModels';
 import type { AppThemeTokens } from '../../common/appTheme';
 import type { ReferenceLang } from '../../common/referenceModels';
 import type { OnlineMdLink } from '../../common/onlineMdModels';
@@ -9,12 +11,12 @@ import bundleManager from '@ohos.bundle.bundleManager';
 
 type ThemePreference = 'dark' | 'light' | 'system';
 
-const APP_DISPLAY_NAME_ZH: string = '开发速查';
+const APP_DISPLAY_NAME_ZH: string = '速记清单';
 const APP_DISPLAY_NAME_EN: string = 'Quick Reference';
-const FALLBACK_VERSION_NAME: string = '0.23.0';
-const FALLBACK_VERSION_CODE: number = 2026021420;
+const FALLBACK_VERSION_NAME: string = '0.24.0';
+const FALLBACK_VERSION_CODE: number = 2026102801;
 const DEVELOPER_NAME: string = '李偲';
-const ONLINE_FILE_LIST_URL: string = 'https://reference.jqknono.com/';
+const ONLINE_FILE_LIST_URL: string = 'https://reference.jqknono.com/files';
 
 interface BundleInfoLike {
   versionName?: string;
@@ -33,6 +35,16 @@ export struct SettingsTab {
   @Prop zhDocCount: number;
   @Prop enDocCount: number;
   @Prop debugModeEnabled: boolean;
+
+  @Prop catalogSources: Array<CatalogSource> = [];
+  @Prop catalogSourceStatuses: Array<CatalogSourceStatus> = [];
+  @Link sourceUrlInput: string;
+  @Prop sourceMessage: string = '';
+  @Prop sourceSaving: boolean = false;
+  onSaveSource?: () => void;
+  onRemoveSource?: (id: string) => void;
+  onRestoreSource?: () => void;
+  onRefreshSources?: () => void;
 
   @Link onlineMdInputUrl: string;
   @Link onlineMdParsing: boolean;
@@ -272,8 +284,8 @@ export struct SettingsTab {
                   .fontColor(this.theme.mutedTextColor)
                   .fontSize(this.fontSize * 0.95);
                 Text(this.t(
-                  '开启后显示在线清单列表加载错误，并允许配置远端服务器地址',
-                  'Show online catalog load errors and allow overriding the remote server address'
+                  '开启后可临时指定默认源的调试服务器地址',
+                  'Temporarily override the default source server address for debugging'
                 ))
                   .fontColor(this.theme.mutedTextColor)
                   .fontSize(this.fontSize * 0.75)
@@ -313,7 +325,7 @@ export struct SettingsTab {
                     .placeholderColor(this.theme.mutedTextColor)
                     .enableAutoFill(false)
                     .backgroundColor(this.theme.pageBackgroundColor)
-                    .border({ width: 1, color: this.theme.borderColor })
+                    .border({ width: this.fontSize * 0.07, color: this.theme.borderColor })
                     .borderRadius(this.fontSize * 0.5)
                     .padding({ left: this.fontSize * 0.6, right: this.fontSize * 0.6, top: this.fontSize * 0.4, bottom: this.fontSize * 0.4 })
                     .onChange((value: string) => {
@@ -340,6 +352,15 @@ export struct SettingsTab {
           .borderRadius(this.fontSize * 0.8)
           .border({ width: this.fontSize * 0.07, color: this.theme.borderColor });
         }
+
+          CatalogSourcesPanel({
+            theme: this.theme, fontSize: this.fontSize, lang: this.lang,
+            sources: this.catalogSources, statuses: this.catalogSourceStatuses,
+            urlInput: this.sourceUrlInput,
+            message: this.sourceMessage, saving: this.sourceSaving,
+            onSave: this.onSaveSource,
+            onRemove: this.onRemoveSource, onRestore: this.onRestoreSource, onRefresh: this.onRefreshSources,
+          });
 
         if (SHOW_IMPORT_MARKDOWN_URL_SETTING) {
           // 在线 Markdown 链接管理
@@ -377,7 +398,7 @@ export struct SettingsTab {
               .placeholderColor(this.theme.mutedTextColor)
               .enableAutoFill(false)
               .backgroundColor(this.theme.pageBackgroundColor)
-              .border({ width: 1, color: this.theme.borderColor })
+              .border({ width: this.fontSize * 0.07, color: this.theme.borderColor })
               .borderRadius(this.fontSize * 0.5)
               .padding({ left: this.fontSize * 0.6, right: this.fontSize * 0.6, top: this.fontSize * 0.4, bottom: this.fontSize * 0.4 })
               .onChange((value: string) => {
@@ -686,11 +707,11 @@ export struct SettingsTab {
             Text(this.t('开源地址：', 'Open Source: '))
               .fontColor(this.theme.mutedTextColor)
               .fontSize(this.fontSize * 0.9);
-            Text('github.com/jqknono/reference-harmony')
+            Text('github.com/reference-list/reference-harmony')
               .fontColor(this.theme.accentColor)
               .fontSize(this.fontSize * 0.9)
               .decoration({ type: TextDecorationType.Underline })
-              .onClick(() => openExternalLink(this.getHostContext(), 'github.com/jqknono/reference-harmony'));
+              .onClick(() => openExternalLink(this.getHostContext(), 'https://github.com/reference-list/reference-harmony'));
           }
           .width('100%')
           .padding({ left: this.fontSize * 0.9, right: this.fontSize * 0.9, top: this.fontSize * 0.7, bottom: this.fontSize * 0.5 });

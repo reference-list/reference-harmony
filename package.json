@@ -7,6 +7,7 @@
   "scripts": {
     "build": "node ./tools/build_pages.mjs",
     "build:pages": "node ./tools/build_pages.mjs",
+    "test:catalog-sources": "npm run build && node --test tools/tests/catalog_sources.integration.test.mjs",
     "hooks:install": "git config core.hooksPath .githooks"
   }
 }

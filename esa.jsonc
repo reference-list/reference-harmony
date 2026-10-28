@@ -1,0 +1,9 @@
+{
+  "name": "reference-harmony",
+  "description": "速记清单应用官网与备忘清单文件列表",
+  "buildCommand": "node ./tools/build_pages.mjs",
+  "assets": {
+    "directory": "./dist",
+    "notFoundStrategy": "404Page"
+  }
+}

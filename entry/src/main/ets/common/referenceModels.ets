@@ -21,6 +21,8 @@ export interface ReferenceSection {
 }
 
 export interface ReferenceDocSummary {
+  sourceId?: string;
+  sourceName?: string;
   id: string;
   name: string;
   title: string;

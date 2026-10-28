@@ -4,10 +4,8 @@ export const RECENT_DOC_MAX_COUNT: number = 3;
 // 特性开关（默认关闭）
 export const ENABLE_RECENT_DOCS: boolean = true;
 export const ENABLE_ORIENTATION_MODE_SETTING: boolean = true;
-// 目录清单：是否启用“在线清单列表（cloud catalog）”，默认关闭。
-// - 关闭：不请求 OnlineCatalogRepository，不展示云端清单入口
-// - 开启：可从远端拉取清单摘要并出现在“目录”中
-export const ENABLE_ONLINE_CLOUD_CATALOG: boolean = false;
+// 在线目录由用户配置的具名清单源提供。
+export const ENABLE_ONLINE_CLOUD_CATALOG: boolean = true;
 // “我的清单”页：是否隐藏导入/分享入口（默认隐藏，避免误触和复杂度）。
 export const HIDE_CUSTOM_LIST_IMPORT_AND_SHARE_ENTRY: boolean = true;
 // 首次启动：是否显示隐私确认弹窗（默认不显示）
@@ -21,8 +19,8 @@ export const TABBAR_AUTO_HIDE_EFFECTIVE_ASPECT_RATIO_THRESHOLD: number = 3;
 // 调试模式（默认关闭）
 // - SHOW_DEBUG_MODE_TOGGLE: 是否在“设置”里显示调试模式开关
 // - 调试模式开启后：
-//   - 在线清单列表加载失败时才展示错误信息（避免影响普通用户）
-//   - 允许配置在线清单后端服务器地址
+//   - 默认源使用指定的调试服务器地址
+//   - 各清单源的同步状态统一在清单源管理区展示
 export const SHOW_DEBUG_MODE_TOGGLE: boolean = true;
 export const DEBUG_MODE_PREF_KEY: string = 'debugModeEnabled';
 export const DEBUG_SERVER_ORIGIN_PREF_KEY: string = 'debugServerOrigin';

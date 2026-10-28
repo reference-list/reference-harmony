@@ -1,4 +1,4 @@
-# 开发速查（Quick Reference）鸿蒙应用开发计划
+# 速记清单（Quick Reference）鸿蒙应用开发计划
 
 ## 应用功能概览
 

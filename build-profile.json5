@@ -5,26 +5,26 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storeFile": "C:/Users/Administrator/.ohos/config/default_reference-harmony_vXazcdT8KQHXWUGkG7XVc_JWeMFxEFv6y2BhJS7iZTs=.p12",
-          "storePassword": "0000001B3029B5411EDB12BEAE51E0F7CEFFCE5539D11F4CD796E3353B8DDA4DB149E257992ACCA80B49C7",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001B93D0366584F2AD51B3837D376042070C85BDBE3C35283381B0B784B65029AE8912A8DD93A60EC0",
+          "storeFile": "/home/jqknono/Documents/HarmonyOS/signing/machines/dev/debug.p12",
+          "storePassword": "000000404c349ca21b0b94b3152cbedf78b55099467be5e31c8274ef7e43334eb6629098e11afaf934c2280b866e0af396e30c5da708bcff89754ed8ef563fd9cb586ff0f5aee9605bd966c68828a693",
+          "keyAlias": "dev_debug",
+          "keyPassword": "000000404c349ca21b0b94b3152cbedf78b55099467be5e31c8274ef7e43334eb6629098e11afaf934c2280b866e0af396e30c5da708bcff89754ed8ef563fd9cb586ff0f5aee9605bd966c68828a693",
           "signAlg": "SHA256withECDSA",
-          "profile": "C:/Users/Administrator/.ohos/config/default_reference-harmony_vXazcdT8KQHXWUGkG7XVc_JWeMFxEFv6y2BhJS7iZTs=.p7b",
-          "certpath": "C:/Users/Administrator/.ohos/config/default_reference-harmony_vXazcdT8KQHXWUGkG7XVc_JWeMFxEFv6y2BhJS7iZTs=.cer"
+          "profile": "/home/jqknono/Documents/HarmonyOS/signing/profiles/reference.app.jqknono.com/debug.p7b",
+          "certpath": "/home/jqknono/Documents/HarmonyOS/signing/machines/dev/debug.cer"
         }
       },
       {
         "name": "publish",
         "type": "HarmonyOS",
         "material": {
-          "storeFile": "F:/huawei/publish.p12",
-          "storePassword": "00000018E3FA6D72BAC8C2F3D9703EDE6A1DC38C46D1C2366CCB192C722EACED3D3BA9C50AD4E532",
-          "keyAlias": "publish",
-          "keyPassword": "000000184BDE51AE33392BB2C80C4979FE9ED4B6EFFAAB940917FBC535CF5F8AABFE86C65CD48F3E",
+          "storeFile": "/home/jqknono/Documents/HarmonyOS/signing/machines/dev/release.p12",
+          "storePassword": "00000030bfaaf7d734f85ab8c0f99f646a8a220c6679ec84ec305546ba01bcdcc6257ca55c1890aee5ff85f10feb76a6cd24902c7a6dcbff3d490d91a39627b4",
+          "keyAlias": "dev_release",
+          "keyPassword": "00000030bfaaf7d734f85ab8c0f99f646a8a220c6679ec84ec305546ba01bcdcc6257ca55c1890aee5ff85f10feb76a6cd24902c7a6dcbff3d490d91a39627b4",
           "signAlg": "SHA256withECDSA",
-          "profile": "F:/huawei/publish-referenceRelease.p7b",
-          "certpath": "F:/huawei/publish.cer"
+          "profile": "/home/jqknono/Documents/HarmonyOS/signing/profiles/reference.app.jqknono.com/release.p7b",
+          "certpath": "/home/jqknono/Documents/HarmonyOS/signing/machines/dev/release.cer"
         }
       }
     ],
@@ -58,10 +58,10 @@
     ],
     "buildModeSet": [
       {
-        "name": "default",
+        "name": "default"
       },
       {
-        "name": "debug",
+        "name": "debug"
       },
       {
         "name": "release"

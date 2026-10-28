@@ -1,5 +1,7 @@
-import { cp, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { REQUIREMENTS, renderRequirementsPage } from './site/requirements.mjs'
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { renderIndexPage, renderFilesPage, renderTermsPage, renderPrivacyPage, renderNotFoundPage } from './site/pages.mjs'
 
 const PROJECT_ROOT = process.cwd()
 const SRC_MDS_DIR = path.join(PROJECT_ROOT, 'mds')
@@ -21,8 +23,6 @@ function normalizeDomain(domain) {
 }
 
 function toDownloadUrl(domain, relPath) {
-  // Prefer relative URLs when domain is not provided so it works for
-  // both GitHub Pages project sites (/repo/) and custom domains.
   if (!domain) return relPath.replace(/\\/g, '/')
   return new URL(relPath.replace(/\\/g, '/'), domain).toString()
 }
@@ -31,6 +31,14 @@ function humanKiB(bytes) {
   const kib = bytes / 1024
   if (kib < 1024) return `${kib.toFixed(1)} KiB`
   return `${(kib / 1024).toFixed(1)} MiB`
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }
 
 async function walkFiles(dirAbs, baseAbs) {
@@ -42,251 +50,39 @@ async function walkFiles(dirAbs, baseAbs) {
       out.push(...(await walkFiles(abs, baseAbs)))
       continue
     }
-    if (e.isFile()) {
-      out.push(path.relative(baseAbs, abs))
-    }
+    if (e.isFile()) out.push(path.relative(baseAbs, abs))
   }
   return out
 }
 
-const domain = normalizeDomain(getArgValue('domain') || process.env.SITE_DOMAIN || '')
-if (!domain) {
-  console.warn(
-    '未提供 --domain 或 SITE_DOMAIN：将生成相对链接（推荐用于 GitHub Pages / 自定义域名场景）。',
-  )
+function detectLang(rel) {
+  const normalized = rel.replace(/\\/g, '/')
+  if (normalized.startsWith('zh/')) return 'zh'
+  if (normalized.startsWith('en/')) return 'en'
+  return '-'
 }
 
-await rm(DIST_DIR, { recursive: true, force: true })
-await mkdir(DIST_DIR, { recursive: true })
-
-// 拷贝 mds 到 dist，保证下载链接可用
-await mkdir(DIST_MDS_DIR, { recursive: true })
-await cp(SRC_MDS_DIR, DIST_MDS_DIR, { recursive: true })
-
-const relFiles = (await walkFiles(SRC_MDS_DIR, SRC_MDS_DIR))
-  .filter((p) => !p.startsWith('.') && !p.includes(`${path.sep}.`))
-  .sort((a, b) => a.localeCompare(b))
-
-const rows = []
-for (const rel of relFiles) {
-  const abs = path.join(SRC_MDS_DIR, rel)
-  const s = await stat(abs)
-  if (!s.isFile()) continue
-
-  const relUrlPath = `mds/${rel}`.replace(/\\/g, '/')
-  const downloadUrl = toDownloadUrl(domain, relUrlPath)
-
-  const mtime = new Date(s.mtimeMs).toISOString().replace('T', ' ').replace('Z', '')
-  const size = humanKiB(s.size)
-
-  rows.push(`
-      <tr>
-        <td class="path"><a href="${downloadUrl}">${relUrlPath}</a></td>
-        <td class="size">${size}</td>
-        <td class="mtime">${mtime}</td>
-        <td class="action">
-          <a class="btn" href="${downloadUrl}" download>下载</a>
-          <button class="btn" data-url="${downloadUrl}">复制链接</button>
-        </td>
-      </tr>`.trim())
-}
-
-const html = `<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>备忘清单 文件列表</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        --bg: Canvas;
-        --fg: CanvasText;
-        --muted: color-mix(in srgb, CanvasText 55%, Canvas 45%);
-        --card: color-mix(in srgb, Canvas 92%, CanvasText 8%);
-        --border: color-mix(in srgb, CanvasText 18%, Canvas 82%);
-        --link: LinkText;
-      }
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--fg);
-        font: 1rem/1.55 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-      }
-      .wrap {
-        max-width: 72rem;
-        margin: 0 auto;
-        padding: 1.25rem;
-      }
-      header {
-        display: grid;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-      }
-      h1 {
-        font-size: 1.5rem;
-        line-height: 1.2;
-        margin: 0;
-      }
-      .meta {
-        color: var(--muted);
-        font-size: 0.95rem;
-      }
-      .card {
-        background: var(--card);
-        border: 0.0625rem solid var(--border);
-        border-radius: 0.75rem;
-        overflow: hidden;
-      }
-      .toolbar {
-        display: grid;
-        gap: 0.75rem;
-        padding: 0.9rem 0.9rem 0.75rem;
-        border-bottom: 0.0625rem solid var(--border);
-      }
-      .toolbar label {
-        font-weight: 600;
-        font-size: 0.95rem;
-      }
-      .toolbar input {
-        width: 100%;
-        border: 0.0625rem solid var(--border);
-        border-radius: 0.6rem;
-        padding: 0.65rem 0.75rem;
-        background: var(--bg);
-        color: var(--fg);
-        outline: none;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      thead th {
-        text-align: left;
-        font-weight: 700;
-        font-size: 0.95rem;
-        padding: 0.75rem 0.9rem;
-        border-bottom: 0.0625rem solid var(--border);
-        background: color-mix(in srgb, var(--card) 90%, var(--bg) 10%);
-      }
-      tbody td {
-        padding: 0.75rem 0.9rem;
-        border-bottom: 0.0625rem solid var(--border);
-        vertical-align: top;
-      }
-      tbody tr:hover {
-        background: color-mix(in srgb, var(--card) 84%, var(--bg) 16%);
-      }
-      a {
-        color: var(--link);
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      .path {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-        font-size: 0.95rem;
-        word-break: break-word;
-      }
-      .size, .mtime {
-        white-space: nowrap;
-        color: var(--muted);
-        font-size: 0.95rem;
-      }
-      .action {
-        white-space: nowrap;
-      }
-      .action .btn + .btn {
-        margin-left: 0.4rem;
-      }
-      .btn {
-        display: inline-block;
-        padding: 0.45rem 0.65rem;
-        border: 0.0625rem solid var(--border);
-        border-radius: 0.6rem;
-        background: var(--bg);
-        color: var(--fg);
-        cursor: pointer;
-        font: inherit;
-      }
-      .btn:hover {
-        background: color-mix(in srgb, var(--bg) 90%, var(--fg) 10%);
-      }
-      .btn.copied {
-        background: #22c55e;
-        color: #fff;
-        border-color: #22c55e;
-      }
-      @media (max-width: 48rem) {
-        thead th:nth-child(3), tbody td:nth-child(3) { display: none; }
-      }
-      @media (max-width: 36rem) {
-        thead th:nth-child(2), tbody td:nth-child(2) { display: none; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <header>
-        <h1>备忘清单 文件列表</h1>
-        <div class="meta">
-          开源地址：<a href="https://github.com/jqknono/reference-harmony" target="_blank" rel="noreferrer">GitHub</a> · 文件数：<span id="count"></span>
-        </div>
-      </header>
-
-      <div class="card">
-        <div class="toolbar">
-          <div>
-            <label for="q">搜索（按路径过滤）</label>
-            <input id="q" type="search" placeholder="例如：mds/zh/git" autocomplete="off" />
-          </div>
-        </div>
-
-        <div style="overflow:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>文件</th>
-                <th>大小</th>
-                <th>修改时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="tbody">
-${rows.map((r) => `              ${r}`).join('\n')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <script>
+function catalogScript() {
+  return `<script>
       (function () {
         var tbody = document.getElementById('tbody');
+        if (!tbody) return;
         var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-        document.getElementById('count').textContent = String(rows.length);
         var input = document.getElementById('q');
-        input.addEventListener('input', function () {
-          var q = (input.value || '').trim().toLowerCase();
-          var shown = 0;
-          rows.forEach(function (tr) {
-            var text = (tr.querySelector('.path') || tr).textContent.toLowerCase();
-            var ok = !q || text.indexOf(q) !== -1;
-            tr.style.display = ok ? '' : 'none';
-            if (ok) shown++;
+        if (input) {
+          input.addEventListener('input', function () {
+            var q = (input.value || '').trim().toLowerCase();
+            rows.forEach(function (tr) {
+              var text = (tr.querySelector('.path') || tr).textContent.toLowerCase();
+              tr.style.display = !q || text.indexOf(q) !== -1 ? '' : 'none';
+            });
           });
-          document.getElementById('count').textContent = String(shown);
-        });
-
-        // 复制链接功能
+        }
         tbody.addEventListener('click', function (e) {
           var btn = e.target.closest('.btn[data-url]');
           if (!btn) return;
           var url = btn.getAttribute('data-url');
-          // Always copy absolute URL for convenience.
-          var abs = url;
-          try { abs = new URL(url, location.href).toString(); } catch (e) {}
+          var abs = new URL(url, location.href).toString();
           navigator.clipboard.writeText(abs).then(function () {
             var orig = btn.textContent;
             btn.textContent = '已复制';
@@ -298,10 +94,110 @@ ${rows.map((r) => `              ${r}`).join('\n')}
           });
         });
       })();
-    </script>
-  </body>
-</html>
-`
+    </script>`
+}
 
-await writeFile(path.join(DIST_DIR, 'index.html'), html, 'utf8')
+const domain = normalizeDomain(getArgValue('domain') || process.env.SITE_DOMAIN || '')
+if (!domain) {
+  console.warn(
+    '未提供 --domain 或 SITE_DOMAIN：将生成相对链接（推荐用于 GitHub Pages / 自定义域名场景）。',
+  )
+}
+
+await rm(DIST_DIR, { recursive: true, force: true })
+await mkdir(DIST_MDS_DIR, { recursive: true })
+await cp(SRC_MDS_DIR, DIST_MDS_DIR, { recursive: true })
+
+const assetsDir = path.join(DIST_DIR, 'assets')
+await mkdir(assetsDir, { recursive: true })
+await cp(path.join(PROJECT_ROOT, 'AppScope/resources/base/media/app_icon.png'), path.join(assetsDir, 'app-icon.png'))
+await cp(
+  path.join(PROJECT_ROOT, 'assets/https___appgallery.huawei.com_app_detail_id=reference.app.jqknono.com.png'),
+  path.join(assetsDir, 'appgallery-qr.png'),
+)
+await cp(path.join(PROJECT_ROOT, 'assets/runtime-flow.png'), path.join(assetsDir, 'runtime-flow.png'))
+await cp(path.join(PROJECT_ROOT, 'tools/site/styles.css'), path.join(DIST_DIR, 'styles.css'))
+await cp(path.join(PROJECT_ROOT, 'entry/src/main/resources/rawfile/marketplace.json'), path.join(DIST_DIR, 'marketplace.json'))
+await cp(path.join(PROJECT_ROOT, 'tools/site/requirements'), path.join(DIST_DIR, 'requirements'), { recursive: true })
+await cp(path.join(PROJECT_ROOT, 'tools/site/requirements.js'), path.join(DIST_DIR, 'requirements.js'))
+const requirementDocuments = await Promise.all(REQUIREMENTS.map(async (doc) => ({
+  ...doc,
+  content: await readFile(path.join(PROJECT_ROOT, 'tools/site/requirements', `${doc.id}.md`), 'utf8'),
+})))
+await writeFile(path.join(DIST_DIR, 'create.html'), renderRequirementsPage(requirementDocuments), 'utf8')
+
+const relFiles = (await walkFiles(SRC_MDS_DIR, SRC_MDS_DIR))
+  .filter((p) => !p.startsWith('.') && !p.includes(`${path.sep}.`))
+  .sort((a, b) => a.localeCompare(b))
+
+const rows = []
+const catalogItems = []
+const catalogMetadata = new Map()
+for (const lang of ['zh', 'en']) {
+  const manifest = JSON.parse(await readFile(path.join(PROJECT_ROOT, 'entry/src/main/resources/rawfile/reference', lang, 'manifest.json'), 'utf8'))
+  for (const doc of manifest.docs) catalogMetadata.set(`${lang}:${doc.id}`, doc)
+}
+for (const rel of relFiles) {
+  const abs = path.join(SRC_MDS_DIR, rel)
+  const s = await stat(abs)
+  if (!s.isFile()) continue
+
+  const relUrlPath = `mds/${rel}`.replace(/\\/g, '/')
+  const downloadUrl = toDownloadUrl(domain, relUrlPath)
+  const mtime = new Date(s.mtimeMs).toISOString().replace('T', ' ').replace('Z', '')
+  const size = humanKiB(s.size)
+  const lang = detectLang(rel)
+  if (lang !== '-' && /\.(md|markdown)$/i.test(rel)) {
+    const id = rel.replace(/\\/g, '/').replace(/^(zh|en)\//, '').replace(/\.(md|markdown)$/i, '')
+    const metadata = catalogMetadata.get(`${lang}:${id}`)
+    catalogItems.push({
+      id, lang,
+      name: metadata?.name || id,
+      title: metadata?.title || metadata?.name || id,
+      mdUrl: downloadUrl,
+      sectionCount: metadata?.sectionCount || 0,
+      cardCount: metadata?.cardCount || 0,
+    })
+  }
+
+  rows.push(`              <tr>
+                <td class="path"><a href="${escapeHtml(downloadUrl)}">${escapeHtml(relUrlPath)}</a></td>
+                <td class="lang">${escapeHtml(lang)}</td>
+                <td class="size">${escapeHtml(size)}</td>
+                <td class="mtime">${escapeHtml(mtime)}</td>
+                <td class="action">
+                  <a class="btn" href="${escapeHtml(downloadUrl)}" download>下载</a>
+                  <button class="btn" data-url="${escapeHtml(downloadUrl)}" type="button">复制链接</button>
+                </td>
+              </tr>`)
+}
+
+const filesHtml = renderFilesPage({
+  fileCount: rows.length,
+  tableRows: rows.join('\n'),
+  catalogScript: catalogScript(),
+})
+const indexHtml = renderIndexPage({
+  fileCount: rows.length,
+})
+if (!indexHtml.includes('速记清单') || !indexHtml.includes('用户协议')) {
+  throw new Error('首页未包含应用名称或用户协议入口')
+}
+if (!filesHtml.includes('备忘清单文件列表')) {
+  throw new Error('清单页未包含文件列表')
+}
+
+await writeFile(path.join(DIST_DIR, 'index.html'), indexHtml, 'utf8')
+await writeFile(path.join(DIST_DIR, 'files.html'), filesHtml, 'utf8')
+await writeFile(path.join(DIST_DIR, 'terms.html'), renderTermsPage(), 'utf8')
+await writeFile(path.join(DIST_DIR, 'privacy.html'), renderPrivacyPage(), 'utf8')
+await writeFile(path.join(DIST_DIR, '404.html'), renderNotFoundPage(), 'utf8')
+await writeFile(path.join(DIST_DIR, 'catalog.json'), JSON.stringify({
+  version: 1,
+  name: '速记清单官方源',
+  homepage: 'https://reference.jqknono.com/',
+  items: catalogItems,
+}, null, 2), 'utf8')
+
 console.log(`已生成：${path.relative(PROJECT_ROOT, path.join(DIST_DIR, 'index.html'))}`)
+console.log(`备忘清单文件数：${rows.length}`)

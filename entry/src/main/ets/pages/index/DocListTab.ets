@@ -404,6 +404,15 @@ export struct DocListTab {
                 .padding(this.fontSize * 1)
                 .width('100%');
 
+                if (doc.sourceName) {
+                  Text(doc.sourceName)
+                    .width('100%')
+                    .maxLines(2)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .fontSize(this.fontSize * 0.75)
+                    .fontColor(this.theme.mutedTextColor)
+                    .padding({ left: this.fontSize, right: this.fontSize, bottom: this.fontSize * 0.4 });
+                }
                 Row({ space: this.fontSize * 0.3 }) {
                   if (this.isDocFavorite(doc.id)) {
                     Text(this.t('收藏', 'Fav'))
@@ -526,7 +535,7 @@ export struct DocListTab {
       // Header（标题+搜索）：横屏 tab 栏隐藏时同步收起。
       Column() {
         Column({ space: this.fontSize * 0.6 }) {
-          Text(this.t('开发速查', 'Quick Reference'))
+          Text(this.t('速记清单', 'Quick Reference'))
             .fontSize(this.fontSize * 1.5)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.theme.accentColor);

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "catalogs": [
+    {
+      "id": "reference-official",
+      "name": "速记清单官方源",
+      "nameEn": "Quick Reference Official",
+      "description": "收录中文与英文技术速查清单，涵盖编程语言、开发工具和常用命令。内容整理自 jaywcjlove/reference 与 Fechin/reference。",
+      "descriptionEn": "Chinese and English cheat sheets for programming languages, developer tools and commands, collected from jaywcjlove/reference and Fechin/reference.",
+      "catalogUrl": "https://reference.jqknono.com/catalog.json",
+      "homepage": "https://reference.jqknono.com/",
+      "author": "速记清单",
+      "tags": ["编程", "开发工具", "中文", "English", "Git", "Python", "JavaScript", "Docker", "Linux", "SQL"],
+      "languages": ["zh", "en"],
+      "count": 402
+    }
+  ]
+}

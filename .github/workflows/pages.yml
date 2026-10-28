@@ -7,8 +7,13 @@ on:
       - master
     paths:
       - "mds/**"
-      - "tools/build_pages.mjs"
+      - "entry/src/main/resources/rawfile/reference/zh/manifest.json"
+      - "entry/src/main/resources/rawfile/reference/en/manifest.json"
+      - "tools/**"
+      - "assets/**"
+      - "AppScope/resources/base/media/app_icon.png"
       - "package.json"
+      - "esa.jsonc"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
     {}
