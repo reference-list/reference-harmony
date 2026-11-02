@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>速记清单应用图标</title>
+  <desc>按参考图重绘：圆角深绿底、薄荷绿带状主体、圆头减号及左下方深绿后折面。</desc>
+  <defs>
+    <clipPath id="icon-clip">
+      <rect width="1024" height="1024" rx="256"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#icon-clip)">
+    <title>速记清单分层背景</title>
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="4%" r="105%">
+      <stop offset="0%" stop-color="#1C704C"/>
+      <stop offset="52%" stop-color="#124B32"/>
+      <stop offset="100%" stop-color="#0B3022"/>
+    </radialGradient>
+  </defs>
+  <g id="background-artwork">
+    <rect width="1024" height="1024" fill="url(#bgGrad)"/>
+  </g>
+    <g id="artwork">
+    <!-- 后折面先画，左下圆润收尾，右上部分由主体遮盖。 -->
+    <path fill="#307B59" d="M232 564 H566 V724 L286 857 Q232 883 232 827 Z"/>
+    <!-- 主体下缘是斜向右下的带状轮廓；偶奇填充保留减号镂空。 -->
+    <path fill="#68CDA0" fill-rule="evenodd" d="
+      M412 161 H612
+      C728 161 792 203 792 292
+      V826 Q792 875 746 856
+      L279 632 Q232 608 232 577
+      V292 C232 203 296 161 412 161 Z
+      M380 374 H644
+      A28 28 0 0 1 644 430
+      H380 A28 28 0 0 1 380 374 Z"/>
+  </g>
+  </g>
+</svg>

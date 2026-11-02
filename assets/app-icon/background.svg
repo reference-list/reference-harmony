@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>速记清单分层背景</title>
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="4%" r="105%">
+      <stop offset="0%" stop-color="#1C704C"/>
+      <stop offset="52%" stop-color="#124B32"/>
+      <stop offset="100%" stop-color="#0B3022"/>
+    </radialGradient>
+  </defs>
+  <g id="background-artwork">
+    <rect width="1024" height="1024" fill="url(#bgGrad)"/>
+  </g>
+</svg>
