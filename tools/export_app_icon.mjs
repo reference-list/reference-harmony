@@ -72,6 +72,7 @@ await copyFile(appIcon, path.join(assetsDir, 'icon-216x216.png'))
 
 await exportPng('app-icon.svg', 108, path.join(assetsDir, 'icon-108x108.png'))
 await exportPng('app-icon.svg', 28, path.join(assetsDir, 'icon-28x28.png'))
+await exportPng('app-icon.svg', 216, path.join(iconDir, 'store-216.png'))
 await exportPng('app-icon.svg', 1024, path.join(iconDir, 'preview.png'))
 await writeFile(path.join(iconDir, 'preview.svg'), await inlinePaper('app-icon.svg'))
 

@@ -8,6 +8,7 @@ SVG 是应用图标的源文件。PNG 由 `npm run export:app-icon` 导出，不
 | `app-icon.svg` | 合成图标，导出 216/108/28 PNG |
 | `background.svg` | HarmonyOS 分层背景，1024 PNG |
 | `foreground.svg` | HarmonyOS 分层前景，1024 PNG |
+| `store-216.png` | AppGallery 商店图标，由合成 SVG 导出 |
 
 前景按参考图重绘：薄荷绿主体斜向右下收尾，深绿后折面从左下露出，中间为圆头减号，无描边。
 
